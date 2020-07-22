@@ -56,12 +56,21 @@ bool MainWindow::readFile(QByteArray &array)
     return ret;
 }
 
+void MainWindow::getXorNumber(QByteArray &array)
+{
+    uchar xorsum = 0x00;
+    for(int i=0; i<array.size(); i++)
+        xorsum ^= array.at(i);
+    array.append(xorsum);
+}
+
 bool MainWindow::writeFile(QByteArray &array)
 {
     QFile file(ui->fileEdit->text());
     bool ret = file.open(QIODevice::WriteOnly);
     if(ret) {
         array.append(ui->suffixEdit->text());
+        getXorNumber(array);
         file.write(array);
         file.close();
     }
@@ -73,13 +82,13 @@ bool MainWindow::inputCheck()
 {
     QString str = ui->sFileEdit->text();
     if(str.isEmpty()) {
-        QMessageBox::information(this, "Title", tr("原始文件不能为空"));
+        QMessageBox::information(this, tr("提示"), tr("原始文件不能为空"));
         return false;
     }
 
     str = ui->fileEdit->text();
     if(str.isEmpty()) {
-        QMessageBox::information(this, "Title", tr("保存文件不能为空"));
+        QMessageBox::information(this, tr("提示"), tr("保存文件不能为空"));
         return false;
     }
 
@@ -94,7 +103,7 @@ void MainWindow::on_startBtn_clicked()
         ret = readFile(array);
         if(ret) {
             writeFile(array);
-            QMessageBox::information(this, "Title", tr("转换成功"));
+            QMessageBox::information(this, tr("提示"), tr("转换成功"));
         }
     }
 }

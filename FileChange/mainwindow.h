@@ -19,6 +19,7 @@ protected:
     bool readFile(QByteArray &array);
     bool writeFile(QByteArray &array);
     bool inputCheck();
+    void getXorNumber(QByteArray &array);
 
 private slots:
     void on_sFileBtn_clicked();
