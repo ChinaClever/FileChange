@@ -20,6 +20,9 @@ protected:
     bool writeFile(QByteArray &array);
     bool inputCheck();
     void getXorNumber(QByteArray &array);
+    ushort calccrc (ushort crc, uchar crcbuf);
+    QByteArray rtu_crc(QByteArray &array);
+    void appendCrc(QByteArray &array);
 
 private slots:
     void on_sFileBtn_clicked();

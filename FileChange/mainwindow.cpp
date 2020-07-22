@@ -64,13 +64,61 @@ void MainWindow::getXorNumber(QByteArray &array)
     array.append(xorsum);
 }
 
+ushort MainWindow::calccrc (ushort crc, uchar crcbuf)
+{
+    uchar x, kkk=0;
+    crc = crc^crcbuf;
+    for(x=0;x<8;x++)
+    {
+        kkk = crc&1;
+        crc >>= 1;
+        crc &= 0x7FFF;
+        if(kkk == 1)
+            crc = crc^0xa001;
+        crc=crc&0xffff;
+    }
+    return crc;
+}
+
+/**
+  * 功　能：CRC校验
+  * 入口参数：buf -> 缓冲区  len -> 长度
+  * 返回值：CRC
+  */
+QByteArray MainWindow::rtu_crc(QByteArray &array)
+{
+    ushort crc = 0xffff;
+    for(int i=0; i<array.size(); i++)
+        crc = calccrc(crc, array.at(i));
+
+    QByteArray res;
+    res.append(crc >> 8);
+    res.append(crc & 0xFF);
+
+    return res;
+}
+
+void MainWindow::appendCrc(QByteArray &array)
+{
+    QByteArray crcs;
+    for(int i=0; i<array.size(); ) {
+        QByteArray temp;
+        for(int k=0; (k<512) && (i<array.size()); k++) {
+             temp.append(array.at(i++));
+        }
+        crcs.append(rtu_crc(temp));
+    }
+    array.append(rtu_crc(crcs));
+}
+
 bool MainWindow::writeFile(QByteArray &array)
 {
     QFile file(ui->fileEdit->text());
     bool ret = file.open(QIODevice::WriteOnly);
     if(ret) {
         array.append(ui->suffixEdit->text());
-        getXorNumber(array);
+        appendCrc(array);
+        //getXorNumber(array);
         file.write(array);
         file.close();
     }
