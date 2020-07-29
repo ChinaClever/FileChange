@@ -103,7 +103,7 @@ void MainWindow::appendCrc(QByteArray &array)
     QByteArray crcs;
     for(int i=0; i<array.size(); ) {
         QByteArray temp;
-        for(int k=0; (k<512) && (i<array.size()); k++) {
+        for(int k=0; (k<1024) && (i<array.size()); k++) {
              temp.append(array.at(i++));
         }
         crcs.append(rtu_crc(temp));
