@@ -37,6 +37,14 @@ void MainWindow::on_fileBtn_clicked()
 
     if(dlg.exec() == QDialog::Accepted) {
         QString fn = dlg.selectedFiles().at(0);
+        if(fn.contains(".bin"))
+        {
+            fn.replace(fn.length()-3,5,"clever");
+        }
+        else
+        {
+            return ;
+        }
         ui->fileEdit->setText(fn);
     }
 }
@@ -92,8 +100,8 @@ QByteArray MainWindow::rtu_crc(QByteArray &array)
         crc = calccrc(crc, array.at(i));
 
     QByteArray res;
-    res.append(crc >> 8);
     res.append(crc & 0xFF);
+    res.append(crc >> 8);
 
     return res;
 }
