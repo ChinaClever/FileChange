@@ -23,6 +23,10 @@ protected:
     ushort calccrc (ushort crc, uchar crcbuf);
     QByteArray rtu_crc(QByteArray &array);
     void appendCrc(QByteArray &array);
+    void CRC32_Init();
+    void CRC32_Update(unsigned char *data, size_t len);
+    QByteArray CRC32_Final();
+    QByteArray Md5(QByteArray ba , QString str);
 
 private slots:
     void on_sFileBtn_clicked();
@@ -31,5 +35,6 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    unsigned long mCrc;
 };
 #endif // MAINWINDOW_H
