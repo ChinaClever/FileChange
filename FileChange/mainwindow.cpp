@@ -3,7 +3,8 @@
 #include <QFileDialog>
 #include <QtCore>
 #include <QMessageBox>
-
+#include <stdio.h>
+#include "myMd5.h"
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -107,28 +108,33 @@ QByteArray MainWindow::rtu_crc(QByteArray &array)
 }
 
 /**
- * @brief Md5
- * @param ba,str
- * @return md5
+ * @brief MyMd5
+ * @param InBuf,OutBuf
+ * @return void
  */
-QByteArray MainWindow::Md5(QByteArray ba , QString str)
+void MainWindow::MyMd5(unsigned char *InBuf,char *OutBuf , int len)
 {
-    QString md5;
-    QByteArray bb,a;
-    QCryptographicHash md(QCryptographicHash::Md5);
-    ba.append(str);
-    qDebug()<<QString(ba).toLatin1().toHex()<<"size"<<ba.size()<<"16进制"<<ba.toHex().toUpper()<<endl;
-    md.addData(ba.toHex().toUpper());
-    bb = md.result();
-    QString ss;
-    ss.append(bb.toHex());
-    qDebug()<<"ss"<<ss<<endl;
-    return bb.toHex();
+    char i;
+    unsigned char decrypt[16]={0x00};
+    MD5_CTX md5;
+    char ch[2]={0,0};
+
+    MD5Init(&md5);
+    MD5Update(&md5,InBuf,len);
+    MD5Final(&md5,decrypt);
+
+    for(i=0;i<16;i++)
+    {
+        sprintf(ch,"%02x",decrypt[i]);
+        OutBuf[2*i] = ch[0];
+        OutBuf[2*i+1] = ch[1];
+    }
 }
 
 void MainWindow::appendCrc(QByteArray &array)
 {
-    QByteArray crcs;
+    //QByteArray crcs;
+    QByteArray md5Str;
     for(int i=0; i<array.size(); ) {
         QByteArray temp;
         int k=0;
@@ -136,18 +142,203 @@ void MainWindow::appendCrc(QByteArray &array)
             temp.append(array.at(i++));
 
         }
-        CRC32_Update((unsigned char*)temp.data(),k);
+        char str[40];
+        MyMd5((unsigned char*)(temp+md5Str).data(),str , temp.size()+md5Str.size());
+        md5Str.clear();
+        for(size_t j = 0 ; j < 32 ; j++)
+            md5Str.append(str[j]);
+        //CRC32_Update((unsigned char*)temp.data(),k);
         //crcs.append(rtu_crc(temp));
     }
-    QByteArray ret = CRC32_Final();
-    QString strFix = "@PLD?FDFQ5";
-    ret = Md5(ret , strFix);
-    //array.append(rtu_crc(crcs));
-    //    for(int i=0; i<ret.size();i++)
-    //        qDebug()<<ret.at(i++);
-    qDebug()<<"ret"<<ret<<endl;
-    array.append(ret);
+
+    //QByteArray ret = CRC32_Final();
+    char strtemp[40];
+    char str1[100];
+    char FixedBuf[11]="@PLD?FDFQ5";
+    strncpy(str1,md5Str.data(),32);
+    strncpy(&str1[32],FixedBuf,10);
+    MyMd5((unsigned char*)str1,strtemp , 42);
+    md5Str.clear();
+    for(size_t j = 0 ; j < 32 ; j++)
+        md5Str.append(strtemp[j]);
+    QString rsaStr = rsaSign(QString(md5Str).toStdString());
+    //std::cout<<"QString(md5Str).toStdString()"<<QString(rsaStr).toStdString()<<"len"<<QString(rsaStr).toStdString().length()<<std::endl;
+    array.append(rsaStr);
+    QString endByte = QString("&ff&%1&").arg(ui->sVersionEdit->text());
+    array.append(endByte);
+    //qDebug()<<rsaStr.size()<<"Last md5Str" << md5Str<<endl;
 }
+
+QString MainWindow::rsaSign(std::string message)
+{
+    //MD5
+    //    std::string text="clever";
+    //    std::string digest;
+    //    CryptoPP::Weak1::MD5 md5;
+    //    CryptoPP::HashFilter hashfilter(md5);
+    //    hashfilter.Attach(new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest), false));
+    //    hashfilter.Put(reinterpret_cast<const unsigned char*>(text.c_str()), text.length());
+    //    hashfilter.MessageEnd();
+    //    QString tmp= QString::fromStdString(digest);
+    //    qDebug()<<"md5:"<<tmp;
+    //    QByteArray privateKeydecBase64 = QByteArray::fromBase64(
+    //                QString("MIIEogIBAAKCAQEAsWTKM5vgDgOmsILmdF+PkPBW76slU9Z/VDN98Zg0ve1B5WKX \
+    //                fbxgdHTtA4nXg0eBUtvhyyhNMbUA8HEPm5ZU8e9XDTkpLW5PG3QWevIrDjVUrDOY \
+    //                h1AiqbpEZP/wPPX98Ckr4Tuf0+1lhuN6hTbbpxK5Nb2k3HyhAzsiJmWGjl4JhXEN \
+    //                gw6+GOhpwuN1i45YKMGn7CBHvksBombo8BCitNfhk51fT3nVwoJbOF0GMIQ6mptN \
+    //                PeqtxK4oZ+Ih3/KXeOAVOuOKaD6nwhIZ9ww9pnZytFVsSQ+0g2pdFEQy/qldoBSF \
+    //                7GiWjgF9dmSBLveH17XY0fMZ0apE7eN6mjFRFQIDAQABAoIBAEIXXCJoQ8zU3WjM \
+    //                DFJ1PAbzFGDM8eZPdzcGzDiTzaqpV7C/z9M/uOwKmDeGRq4ZmPwnAfPv+vq3BjeO \
+    //                2BLOqq1Mz7EUh9vuSjjfQnTh/tqXUgmqW3ymhZOY21yJ4pbDy62LmVacIUsTGo1r \
+    //                +TzimGmh1zFHi8G+CTsr7+hAUSZ/EcjrdrcoaWOGkttqcm9FBG0cE+iIN60Ao7x4 \
+    //                FeZrQrWEWRaIKrripwMwU/TjAHdfnLOpe/JRzmOGn2CAQBvTBOnFqXSnqGWZcumJ \
+    //                7uZFGydF4lHZo6TE6pXoLjk5U7oIhg3aDi2466c2ENAnha+0imj+e4h/TJNKfTGT \
+    //                3Eh1q+ECgYEA3GmGe3aHFFxkMgt0KnD7svvMHbSN/VW2+0Mzfa4v0pyLuR0FM1rz \
+    //                8cqXwZ0J9gERgB5hPi7j8FZ6aSxwee17jb4FhKsnFJeNHR+LD+Z2TlcSieNI6wfK \
+    //                SM1SanF9QK5BF10TAvLkNaWMWUf5MlITe8XlEZ7L0g3Ql31GXIIwoY0CgYEAzgkl \
+    //                fJoEVBbUkRuEPjNKYPZPA7HPE92nwmuzQ1kZgv6Gp7xgZuNTDV+VZBdzbNfpibq+ \
+    //                cLFBbL0A5fCOnkpFdaYmvh+v6OPvJ1C6o7En3TW7+8Z9y5NGab34SIKYLPtH8yhd \
+    //                F+jIZeWz/uK6YkG9I1GP+ngfSlaJyoCSEX+fF6kCgYBwaf2l4HjaYJjVkVPpBYDJ \
+    //                83RSPjEg4OOXWNndIsbPQvpcKjnpzFyYmDw4CjD3X+oeDuCHx4CHpoN+OqUO+plG \
+    //                XIER/fzLmtPk456YOHFkWTJiUyJwhKOd5+I92a4JHBakpNq6aUkNN2bSbkvhZ0z6 \
+    //                lp7TEstfUZ5udP0610eYTQKBgAMtqvFgIt71NzRB22lmOyiBxDhHXu1shvD93lcU \
+    //                ocseiA9AXbBYo2haaCCSKAquzgB87AErCtpVlBT4AAs7FBU7ie9256zND1xo52gt \
+    //                DHNiJ9M7fadNT1HER3c+5IAVJEgBAGalBapkv8EX2E45u2Q3FuSDQ+BOs3N3RkmU \
+    //                0Wx5AoGAXPWfHIVWnCcb+PoXC75ytXkWJt33lvaWgFbagad/9I+qjeimwh0N68Ir \
+    //                yXPc+5hOsJ3r6QAWf5xRZWCsSVaTBhyrOgGHuDUnRSJLEwPT1wEjO+4v0WMAG3zb \
+    //                mRyA4h68fb9cerOpmqWpkzHywsd2Y7RKTKHM2KOSRPmmHiB+b5U=").toLatin1());//pkcs1
+    QByteArray privateKeydecBase64 = QByteArray::fromBase64(
+                QString("MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5S3A9QSmiFwTD \
+                        Lf+xoFXGvry7tKJu/qqYliH418iVFxj+7ewDJdiY45fJhJLd52QtqzXKEfKnIsUc \
+                        qC0ZdA7qlt/eGS7x1aJVt+yPTjspPSlB1mlmXmq/5B4gxA2YQcvdLV2yQH5NAOPH \
+                        cR7gvHhKelcC35qqdqJzBFNX9Q47WCxbn/mdm5g7uPELlcWI35w7TGuysg4jhoOB \
+                        PIKq9sLaXTwa9WRuxbBZMJ0xEwNa4DQGkvpwg822JUXsxnL0XgA4X/i/xk6IGMH7 \
+                        8Iot5jIKP91FCzMnlZeIvyWlaEIzFhlpzXqdVqlWJXOHR/WctnyeSGunO+g6i9/p \
+                        tkaTPfKrAgMBAAECggEBAJf/ShL1YTGVsFJraVRMMhDWZfuUMarbPRXuEfAPEns6 \
+                        d0an5PKwGP1RtTGZjuB477SGvZkFIAf6fbcEPfqjOZk2Km4GOnwmwwON3H+xrNYn \
+                        VbCsMcnHqcm/VveJ250KXDETBckzHmgMUs1H/gxcjlCKCtZQlo8+wgOXiMaePw5t \
+                        4FZiDBv4gZ/7sEhs/LaBy1uhmgX/QPZvFqZij6wx4KqKCYkjneRT7ljpmK2NdepJ \
+                        yJbyFdWY/nBFGfk4wqdpU0UFB7wI3UR0uli6GKHniZRv4FsSZhNkwRmwgntLGsFn \
+                        wxjtsqt0pW4def8I9JWCnJI9Du9f4d8+f6HrmglsQAECgYEA4t+E2VqyctA+UCpH \
+                        R2V9jmd9ddmsoQm/8rdHPCw1xR2Xw4kP74g0ZBcvWSOVIyJPsOnWzEbG6QKKT7n1 \
+                        cWzM5eACyfHa6Mx/9LIvlRX6cx77fPrvwU+RB7fef01bH7VSwUgm2marg26teAKz \
+                        ZQ1drCsduA2TOs7hwsd04nIt0xECgYEA0RVjzMQbmIDTPJgGPVwTaqO/KXf8jhBn \
+                        auVrQ/yc98/EnQzOG99SH4yOvnTt2/5bPcaDSAf9tlVqwrOkOcHfJbSXVOUAnDjE \
+                        sX2eSMUGW5X3BR0Qxcc0T9LGTl0q5Xq0FbCoGCuCiMlIjar3XdMLxpkj1r2z3xnV \
+                        jDewCfjN8fsCgYEAga8vK2eS1dp/pCdms0MqcDpsFu+kpDEEjeOCTr0ex1xRIi64 \
+                        8z0yZXxzTkrutzSnxQMGC6LxlMQk98neqUV+InDYZ0Ne1PAAvIkWdewoS6IMM7bl \
+                        UeT/jB/oiXBYhFmLwnxR6UoDBJBBjHZOwZbQUtgaltj7rgQQPNzyzXZjB2ECgYAU \
+                        E566qdYQhcZC2kI3ICFJKyIPBFN+/LpBfHgZVidocE3r2q/r4zzKhL+sMCQq7Lis \
+                        LOSsRQAqwvb2bTOGzEP2JeomH7s4RQc2F97cE/cxUiwfFJRouWEfjRi3q6CT2n1y \
+                        W704XO0y30kVOWZ5XuuRjWDwnNSpxpxH040W2ApGgwKBgEUUOkh1Afpj+hgto2SI \
+                        AG/JgwDzgttUnZJTQyuZDMuOUsjzxrgazzvM4QWfMAlmoczQTXdhb3jhsf7KPoqm \
+                        QM7hmVQ5HoCmMWdx6dvg/ZC2ozAiyT/8JJB9dNfqkbyxDuw6OOfamgQ5yjOzVaTy \
+                        68h8JPWcH619enP88iZxUMfU").toLatin1());
+
+
+    QByteArray publicKeydecBase64 = QByteArray::fromBase64(
+                QString("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsWTKM5vgDgOmsILmdF+P \
+                        kPBW76slU9Z/VDN98Zg0ve1B5WKXfbxgdHTtA4nXg0eBUtvhyyhNMbUA8HEPm5ZU \
+                        8e9XDTkpLW5PG3QWevIrDjVUrDOYh1AiqbpEZP/wPPX98Ckr4Tuf0+1lhuN6hTbb \
+                        pxK5Nb2k3HyhAzsiJmWGjl4JhXENgw6+GOhpwuN1i45YKMGn7CBHvksBombo8BCi \
+                        tNfhk51fT3nVwoJbOF0GMIQ6mptNPeqtxK4oZ+Ih3/KXeOAVOuOKaD6nwhIZ9ww9 \
+                        pnZytFVsSQ+0g2pdFEQy/qldoBSF7GiWjgF9dmSBLveH17XY0fMZ0apE7eN6mjFR \
+                        FQIDAQAB").toLatin1());
+
+    CryptoPP::AutoSeededRandomPool rng;
+    CryptoPP::ByteQueue Privatequeue;
+    CryptoPP::HexDecoder encoder(new CryptoPP::Redirector(Privatequeue));
+    CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Signer signer;
+    std::string dek = QString(privateKeydecBase64.toHex()).toStdString();
+    encoder.Put((const unsigned char*)dek.data(), dek.size());
+    encoder.MessageEnd();
+    signer.AccessKey().Load(Privatequeue);
+
+
+    // Sign message
+    std::string signedMessage = "";
+    CryptoPP::StringSource s1(message, true, new CryptoPP::SignerFilter(rng, signer, new CryptoPP::HexEncoder(new CryptoPP::StringSink(signedMessage))));
+
+    QByteArray bb;
+    qDebug()<<QString::fromStdString(signedMessage.c_str()).toLower()<<endl;
+    //StringToHex(QString::fromStdString(signedMessage.c_str()).toLower() , bb);
+    bb.append(QString::fromStdString(signedMessage.c_str()).toLower());
+
+
+    //    CryptoPP::ByteQueue Publicqueue;
+    //    CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Verifier verifier;
+    //    CryptoPP::HexDecoder decoder(new CryptoPP::Redirector(Publicqueue));
+    //    std::string dec = QString(publicKeydecBase64.toHex()).toStdString();
+    //    //std::cout<<"dec"<<dec<<std::endl;
+    //    decoder.Put((const unsigned char*)dec.data(), dec.size());
+    //    decoder.MessageEnd();
+    //    verifier.AccessKey().Load(Publicqueue);
+
+    //    CryptoPP::StringSource signatureFile( signedMessage, true, new CryptoPP::HexDecoder);
+    //    if (signatureFile.MaxRetrievable() != verifier.SignatureLength())
+    //    { throw std::string( "Signature Size Problem" ); }
+
+    //    CryptoPP::SecByteBlock signature1(verifier.SignatureLength());
+    //    signatureFile.Get(signature1, signature1.size());
+
+    //    // Verify
+    //    CryptoPP::SignatureVerificationFilter *verifierFilter = new CryptoPP::SignatureVerificationFilter(verifier);
+    //    verifierFilter->Put(signature1, verifier.SignatureLength());
+    //    CryptoPP::StringSource s(message, true, verifierFilter);
+
+    //    // Result
+    //    qDebug()<<"verifierFilter->GetLastResult()"<<verifierFilter->GetLastResult()<<endl;
+
+    //    // Result
+    //    if(true == verifierFilter->GetLastResult()) {
+    //        qDebug() << "Signature on message verified" << endl;
+    //    } else {
+    //        qDebug() << "Message verification failed" << endl;
+    //    }
+    return bb;
+}
+
+
+int MainWindow::ConvertHexChar(unsigned char ch)
+{
+    if((ch >= '0') && (ch <= '9'))
+        return ch-0x30;
+    else if((ch >= 'A') && (ch <= 'F'))
+        return ch-'A'+10;
+    else if((ch >= 'a') && (ch <= 'f'))
+        return ch-'a'+10;
+    else return (-1);
+}
+
+
+void MainWindow::StringToHex(QString str, QByteArray &senddata)
+{
+    int hexdata,lowhexdata;
+    int len = str.length();
+    char lstr,hstr;
+    for(int i=0; i<len; )
+    {
+        hstr=str[i].toLatin1();
+        if(hstr == ' ')
+        {
+            i++;
+            continue;
+        }
+        i++;
+        if(i >= len)
+            break;
+        lstr = str[i].toLatin1();
+        hexdata = ConvertHexChar(hstr);
+        lowhexdata = ConvertHexChar(lstr);
+        if((hexdata == 16) || (lowhexdata == 16))
+            break;
+        else
+            hexdata = hexdata*16+lowhexdata;
+        i++;
+        senddata.append(hexdata);
+    }
+}
+
 
 bool MainWindow::writeFile(QByteArray &array)
 {
@@ -178,7 +369,38 @@ bool MainWindow::inputCheck()
         return false;
     }
 
+    str = ui->sVersionEdit->text();
+    if(str.isEmpty()) {
+        QMessageBox::information(this, tr("提示"), tr("版本号不能为空"));
+        return false;
+    }
+    if(!isDigitStr(str))
+    {
+        QMessageBox::information(this, tr("提示"), tr("版本号不能为非数字"));
+        return false;
+    }
+
     return true;
+}
+
+/***
+  *判断一个字符串是否为纯数字
+  */
+bool MainWindow::isDigitStr(QString src)
+{
+    QByteArray ba = src.toLatin1();//QString 转换为 char*
+     const char *s = ba.data();
+
+    while(*s && *s>='0' && *s<='9') s++;
+
+    if (*s)
+    { //不是纯数字
+        return false;
+    }
+    else
+    { //纯数字
+        return true;
+    }
 }
 
 void MainWindow::on_startBtn_clicked()
@@ -188,7 +410,7 @@ void MainWindow::on_startBtn_clicked()
         QByteArray array;
         ret = readFile(array);
         if(ret) {
-            CRC32_Init();
+            //CRC32_Init();
             writeFile(array);
             QMessageBox::information(this, tr("提示"), tr("转换成功"));
         }
