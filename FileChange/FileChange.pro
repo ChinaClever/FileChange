@@ -1,7 +1,7 @@
 QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-TARGET = CleverPackagingTool_V1.4
+TARGET = CleverPackagingTool_V1.5
 CONFIG += c++11
 
 # Cryptopp使用方法链接：https://blog.zhengjunxin.com/archives/996/

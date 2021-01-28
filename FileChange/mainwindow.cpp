@@ -3,8 +3,10 @@
 #include <QFileDialog>
 #include <QtCore>
 #include <QMessageBox>
+#include <QDesktopServices>
 #include <stdio.h>
 #include "myMd5.h"
+#include <QCryptographicHash>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -26,6 +28,21 @@ void MainWindow::on_sFileBtn_clicked()
     if(dlg.exec() == QDialog::Accepted) {
         QString fn = dlg.selectedFiles().at(0);
         ui->sFileEdit->setText(fn);
+        if(fn.contains(".bin")||fn.contains(".txt"))
+        {
+            if(ui->changeVercomboBox->currentIndex()==0){
+                fn.replace(fn.length()-3,3,"cl");
+                fn.insert(fn.length()-3,"_"+ui->sVersionEdit->text());
+            }else{
+                fn.replace(fn.length()-3,3,"leg");
+                fn.insert(fn.length()-4,"_"+ui->sVersionEdit->text());
+            }
+        }
+        else
+        {
+            return ;
+        }
+        ui->fileEdit->setText(fn);
     }
 }
 
@@ -40,7 +57,13 @@ void MainWindow::on_fileBtn_clicked()
         QString fn = dlg.selectedFiles().at(0);
         if(fn.contains(".bin")||fn.contains(".txt"))
         {
-            fn.replace(fn.length()-3,5,"clever");
+            if(ui->changeVercomboBox->currentIndex()==0){
+                fn.replace(fn.length()-3,3,"cl");
+                fn.insert(fn.length()-3,"_"+ui->sVersionEdit->text());
+            }else{
+                fn.replace(fn.length()-3,3,"leg");
+                fn.insert(fn.length()-4,"_"+ui->sVersionEdit->text());
+            }
         }
         else
         {
@@ -151,6 +174,19 @@ void MainWindow::appendCrc(QByteArray &array)
         //crcs.append(rtu_crc(temp));
     }
 
+    unsigned char data1[21]={0xF0,0xE6,0x01,0xFF,0x1D,0x84,0x00,0x08,0xCD,0x23,0xFF,0x08,0xD3,0xF1,0x00,0x08,0x0D,0x1F,0x01,0x08,0x5D};
+    QByteArray test;
+    test.append((char*)data1);
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(test); //将btArray作为参数加密
+    QByteArray resultArray=hash.result();//得到hash加密后的结果
+
+   //QString md5=resultArray.toHex(); //将字节数组内容转换为字符串
+    qDebug()<<"Sha256"<<resultArray<<endl;
+
+
+
+
     //QByteArray ret = CRC32_Final();
     char strtemp[40];
     char str1[100];
@@ -164,7 +200,7 @@ void MainWindow::appendCrc(QByteArray &array)
     QString rsaStr = rsaSign(QString(md5Str).toStdString());
     //std::cout<<"QString(md5Str).toStdString()"<<QString(rsaStr).toStdString()<<"len"<<QString(rsaStr).toStdString().length()<<std::endl;
     array.append(rsaStr);
-    QString endByte = QString("&ff&%1&").arg(ui->sVersionEdit->text());
+    QString endByte = QString("&%1&%2&").arg(ui->changeVercomboBox->currentIndex()==0?"241":"ff").arg(ui->sVersionEdit->text());
     array.append(endByte);
     //qDebug()<<rsaStr.size()<<"Last md5Str" << md5Str<<endl;
 }
@@ -236,7 +272,7 @@ QString MainWindow::rsaSign(std::string message)
                         68h8JPWcH619enP88iZxUMfU").toLatin1());
 
 
-    QByteArray publicKeydecBase64 = QByteArray::fromBase64(
+                        QByteArray publicKeydecBase64 = QByteArray::fromBase64(
                 QString("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsWTKM5vgDgOmsILmdF+P \
                         kPBW76slU9Z/VDN98Zg0ve1B5WKXfbxgdHTtA4nXg0eBUtvhyyhNMbUA8HEPm5ZU \
                         8e9XDTkpLW5PG3QWevIrDjVUrDOYh1AiqbpEZP/wPPX98Ckr4Tuf0+1lhuN6hTbb \
@@ -245,11 +281,11 @@ QString MainWindow::rsaSign(std::string message)
                         pnZytFVsSQ+0g2pdFEQy/qldoBSF7GiWjgF9dmSBLveH17XY0fMZ0apE7eN6mjFR \
                         FQIDAQAB").toLatin1());
 
-    CryptoPP::AutoSeededRandomPool rng;
-    CryptoPP::ByteQueue Privatequeue;
-    CryptoPP::HexDecoder encoder(new CryptoPP::Redirector(Privatequeue));
-    CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Signer signer;
-    std::string dek = QString(privateKeydecBase64.toHex()).toStdString();
+                        CryptoPP::AutoSeededRandomPool rng;
+                CryptoPP::ByteQueue Privatequeue;
+            CryptoPP::HexDecoder encoder(new CryptoPP::Redirector(Privatequeue));
+                CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Signer signer;
+            std::string dek = QString(privateKeydecBase64.toHex()).toStdString();
     encoder.Put((const unsigned char*)dek.data(), dek.size());
     encoder.MessageEnd();
     signer.AccessKey().Load(Privatequeue);
@@ -389,7 +425,7 @@ bool MainWindow::inputCheck()
 bool MainWindow::isDigitStr(QString src)
 {
     QByteArray ba = src.toLatin1();//QString 转换为 char*
-     const char *s = ba.data();
+    const char *s = ba.data();
 
     while(*s && *s>='0' && *s<='9') s++;
 
@@ -413,6 +449,10 @@ void MainWindow::on_startBtn_clicked()
             //CRC32_Init();
             writeFile(array);
             QMessageBox::information(this, tr("提示"), tr("转换成功"));
+
+            QString fn = ui->sFileEdit->text();
+            int index = fn.lastIndexOf('/');
+            QDesktopServices::openUrl(QUrl("file:///"+fn.left(index), QUrl::TolerantMode));
         }
     }
 }
@@ -504,3 +544,4 @@ QByteArray MainWindow::CRC32_Final()
 
     return ret;
 }
+
