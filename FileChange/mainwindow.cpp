@@ -212,8 +212,9 @@ void MainWindow::appendCrc(QByteArray &array)
     md5Str=hashlast.result();
 
     qDebug()<<md5Str.size()<<" last sha256 "<<md5Str<<"   string "<<md5Str.toHex()<<endl;
-    QString rsaStr = rsaSign(QString(md5Str).toStdString());
+    QString rsaStr = rsaSign(QString(md5Str.toHex()).toStdString());
     //std::cout<<"QString(md5Str).toStdString()"<<QString(rsaStr).toStdString()<<"len"<<QString(rsaStr).toStdString().length()<<std::endl;
+    qDebug()<<"rsaStr"<<rsaStr<<endl;
     array.append(rsaStr);
     QString endByte = QString("&%1&%2&").arg(ui->changeVercomboBox->currentIndex()==0?"241":"ff").arg(ui->sVersionEdit->text());
     array.append(endByte);
