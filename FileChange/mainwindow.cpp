@@ -165,24 +165,30 @@ void MainWindow::appendCrc(QByteArray &array)
             temp.append(array.at(i++));
 
         }
-        char str[40];
-        MyMd5((unsigned char*)(temp+md5Str).data(),str , temp.size()+md5Str.size());
-        md5Str.clear();
-        for(size_t j = 0 ; j < 32 ; j++)
-            md5Str.append(str[j]);
+//        char str[40];
+//        MyMd5((unsigned char*)(temp+md5Str).data(),str , temp.size()+md5Str.size());
+//        md5Str.clear();
+//        for(size_t j = 0 ; j < 32 ; j++)
+//            md5Str.append(str[j]);
+        QByteArray test;
+        test.append(temp+md5Str);
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.addData(test); //将btArray作为参数加密
+        md5Str=hash.result();
+        qDebug()<<temp.size() << "temp size"<<md5Str.size()<<" sha256 "<<md5Str<<"   string "<<md5Str.toHex()<<endl;
         //CRC32_Update((unsigned char*)temp.data(),k);
         //crcs.append(rtu_crc(temp));
     }
 
-    unsigned char data1[21]={0xF0,0xE6,0x01,0xFF,0x1D,0x84,0x00,0x08,0xCD,0x23,0xFF,0x08,0xD3,0xF1,0x00,0x08,0x0D,0x1F,0x01,0x08,0x5D};
-    QByteArray test;
-    test.append((char*)data1);
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    hash.addData(test); //将btArray作为参数加密
-    QByteArray resultArray=hash.result();//得到hash加密后的结果
+//    unsigned char data1[21]={0xF0,0xE6,0x01,0xFF,0x1D,0x84,0x00,0x08,0xCD,0x23,0xFF,0x08,0xD3,0xF1,0x00,0x08,0x0D,0x1F,0x01,0x08,0x5D};
+//    QByteArray test;
+//    test.append((char*)data1);
+//    QCryptographicHash hash(QCryptographicHash::Sha256);
+//    hash.addData(test); //将btArray作为参数加密
+//    QByteArray resultArray=hash.result();//得到hash加密后的结果
 
    //QString md5=resultArray.toHex(); //将字节数组内容转换为字符串
-    qDebug()<<"Sha256"<<resultArray<<endl;
+//    qDebug()<<"Sha256"<<resultArray.size()<<endl;
 
 
 
@@ -191,12 +197,21 @@ void MainWindow::appendCrc(QByteArray &array)
     char strtemp[40];
     char str1[100];
     char FixedBuf[11]="@PLD?FDFQ5";
+    qDebug()<<md5Str.size()<<endl;
     strncpy(str1,md5Str.data(),32);
-    strncpy(&str1[32],FixedBuf,10);
-    MyMd5((unsigned char*)str1,strtemp , 42);
-    md5Str.clear();
-    for(size_t j = 0 ; j < 32 ; j++)
-        md5Str.append(strtemp[j]);
+    strncpy(&str1[32],FixedBuf,11);
+//    MyMd5((unsigned char*)str1,strtemp , 42);
+//    md5Str.clear();
+
+
+    QByteArray testlast;
+    testlast.append(str1);
+    qDebug()<<testlast.size()<<" testlast "<<testlast<<"  testlast string "<<testlast.toHex()<<endl;
+    QCryptographicHash hashlast(QCryptographicHash::Sha256);
+    hashlast.addData(testlast); //将btArray作为参数加密
+    md5Str=hashlast.result();
+
+    qDebug()<<md5Str.size()<<" last sha256 "<<md5Str<<"   string "<<md5Str.toHex()<<endl;
     QString rsaStr = rsaSign(QString(md5Str).toStdString());
     //std::cout<<"QString(md5Str).toStdString()"<<QString(rsaStr).toStdString()<<"len"<<QString(rsaStr).toStdString().length()<<std::endl;
     array.append(rsaStr);
@@ -272,7 +287,7 @@ QString MainWindow::rsaSign(std::string message)
                         68h8JPWcH619enP88iZxUMfU").toLatin1());
 
 
-                        QByteArray publicKeydecBase64 = QByteArray::fromBase64(
+    QByteArray publicKeydecBase64 = QByteArray::fromBase64(
                 QString("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsWTKM5vgDgOmsILmdF+P \
                         kPBW76slU9Z/VDN98Zg0ve1B5WKXfbxgdHTtA4nXg0eBUtvhyyhNMbUA8HEPm5ZU \
                         8e9XDTkpLW5PG3QWevIrDjVUrDOYh1AiqbpEZP/wPPX98Ckr4Tuf0+1lhuN6hTbb \
@@ -281,11 +296,11 @@ QString MainWindow::rsaSign(std::string message)
                         pnZytFVsSQ+0g2pdFEQy/qldoBSF7GiWjgF9dmSBLveH17XY0fMZ0apE7eN6mjFR \
                         FQIDAQAB").toLatin1());
 
-                        CryptoPP::AutoSeededRandomPool rng;
-                CryptoPP::ByteQueue Privatequeue;
-            CryptoPP::HexDecoder encoder(new CryptoPP::Redirector(Privatequeue));
-                CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Signer signer;
-            std::string dek = QString(privateKeydecBase64.toHex()).toStdString();
+    CryptoPP::AutoSeededRandomPool rng;
+    CryptoPP::ByteQueue Privatequeue;
+    CryptoPP::HexDecoder encoder(new CryptoPP::Redirector(Privatequeue));
+    CryptoPP::Weak::RSASSA_PKCS1v15_MD5_Signer signer;
+    std::string dek = QString(privateKeydecBase64.toHex()).toStdString();
     encoder.Put((const unsigned char*)dek.data(), dek.size());
     encoder.MessageEnd();
     signer.AccessKey().Load(Privatequeue);
