@@ -198,17 +198,20 @@ void MainWindow::appendCrc(QByteArray &array)
     char str1[100];
     char FixedBuf[11]="@PLD?FDFQ5";
     qDebug()<<md5Str.size()<<endl;
-    strncpy(str1,md5Str.data(),32);
+    for(int i = 0 ; i < 32 ; i++)
+    {
+        str1[i] = md5Str.data()[i];
+    }
     strncpy(&str1[32],FixedBuf,11);
 //    MyMd5((unsigned char*)str1,strtemp , 42);
 //    md5Str.clear();
 
 
-    QByteArray testlast;
-    testlast.append(str1);
-    qDebug()<<testlast.size()<<" testlast "<<testlast<<"  testlast string "<<testlast.toHex()<<endl;
+//    QByteArray testlast;
+//    testlast.append(str1);
+//    qDebug()<<testlast.size()<<" testlast "<<testlast<<"  testlast string "<<testlast.toHex()<<endl;
     QCryptographicHash hashlast(QCryptographicHash::Sha256);
-    hashlast.addData(testlast); //将btArray作为参数加密
+    hashlast.addData(str1 , 42); //将btArray作为参数加密
     md5Str=hashlast.result();
 
     qDebug()<<md5Str.size()<<" last sha256 "<<md5Str<<"   string "<<md5Str.toHex()<<endl;
@@ -461,6 +464,7 @@ void MainWindow::on_startBtn_clicked()
     if(ret) {
         QByteArray array;
         ret = readFile(array);
+//        array.remove(array.size() - 776, 776);//配合测试不同情况
         if(ret) {
             //CRC32_Init();
             writeFile(array);

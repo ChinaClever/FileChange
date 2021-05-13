@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>PDU升级固件打包工具V1.6--数字签名</string>
+   <string>PDU升级固件打包工具V1.7--数字签名</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLineEdit" name="sFileEdit">
