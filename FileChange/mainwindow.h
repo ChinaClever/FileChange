@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "cryptopputil.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -14,6 +15,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    QString rsaSign(std::string message);
+    void StringToHex(QString str, QByteArray &senddata);
+    int ConvertHexChar(unsigned char ch);
 
 protected:
     bool readFile(QByteArray &array);
@@ -23,6 +27,11 @@ protected:
     ushort calccrc (ushort crc, uchar crcbuf);
     QByteArray rtu_crc(QByteArray &array);
     void appendCrc(QByteArray &array);
+    void CRC32_Init();
+    void CRC32_Update(unsigned char *data, size_t len);
+    QByteArray CRC32_Final();
+    void MyMd5(unsigned char *InBuf,char *OutBuf,int len);
+    bool isDigitStr(QString src);
 
 private slots:
     void on_sFileBtn_clicked();
@@ -31,5 +40,6 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    unsigned long mCrc;
 };
 #endif // MAINWINDOW_H
