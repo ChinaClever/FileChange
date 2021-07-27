@@ -2,7 +2,22 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+TARGET = CleverPackagingTool_V1.8
+
 CONFIG += c++11
+
+# Cryptopp使用方法链接：https://blog.zhengjunxin.com/archives/996/
+# https://github.com/weidai11/cryptopp
+# 使用了英特尔官方指令集用于优化算法速度，以下是缺少的：
+QMAKE_CXXFLAGS += "-mssse3"
+QMAKE_CXXFLAGS += "-msse4.1"
+QMAKE_CXXFLAGS += "-mavx2"
+QMAKE_CXXFLAGS += "-mpclmul"
+QMAKE_CXXFLAGS += "-maes"
+QMAKE_CXXFLAGS += "-msha"
+# 支持OpenMP特性，发挥算法的最大潜能
+LIBS += -lgomp -lpthread
+QMAKE_CXXFLAGS += "-fopenmp"
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
