@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>PDU升级固件打包工具V1.8--数字签名</string>
+   <string>PDU升级固件打包工具V1.9--数字签名</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLineEdit" name="sFileEdit">
@@ -178,6 +178,11 @@
     <item>
      <property name="text">
       <string>不可降级</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>升级不验证账号密码</string>
      </property>
     </item>
    </widget>

@@ -219,7 +219,11 @@ void MainWindow::appendCrc(QByteArray &array)
     //std::cout<<"QString(md5Str).toStdString()"<<QString(rsaStr).toStdString()<<"len"<<QString(rsaStr).toStdString().length()<<std::endl;
     qDebug()<<"rsaStr"<<rsaStr<<endl;
     array.append(rsaStr);
-    QString endByte = QString("&%1&%2&").arg(ui->changeVercomboBox->currentIndex()==0?"241":"ff").arg(ui->sVersionEdit->text());//241:可降级 ff:不可降级
+    QString code = "241";
+    if( ui->changeVercomboBox->currentIndex()==0 )code = "241";//0xf1
+    else if( ui->changeVercomboBox->currentIndex()==1 )code = "ff";
+    else if( ui->changeVercomboBox->currentIndex()==2 )code = "250";//0xfa
+    QString endByte = QString("&%1&%2&").arg(code).arg(ui->sVersionEdit->text());//241:可降级 ff:不可降级
     if( ui->chipVercomboBox->currentIndex() == 0 ){
         endByte+="0";
     }else if(ui->chipVercomboBox->currentIndex() == 1){
