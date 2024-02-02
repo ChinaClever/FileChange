@@ -223,12 +223,12 @@ void MainWindow::appendCrc(QByteArray &array)
     if( ui->changeVercomboBox->currentIndex()==0 )code = "241";//0xf1
     else if( ui->changeVercomboBox->currentIndex()==1 )code = "ff";
     else if( ui->changeVercomboBox->currentIndex()==2 )code = "250";//0xfa
-    QString endByte = QString("&%1&%2&").arg(code).arg(ui->sVersionEdit->text());//241:可降级 ff:不可降级
+    QString endByte = QString("&%1&%2&").arg(code).arg(ui->sVersionEdit->text());//241:可降级 ff:不可降级 250：升级不验证密码
     if( ui->chipVercomboBox->currentIndex() == 0 ){
         endByte+="0";
     }else if(ui->chipVercomboBox->currentIndex() == 1){
         endByte+="1";
-    }
+    }//0:ST 1:HC
     array.append(endByte);
     //qDebug()<<rsaStr.size()<<"Last md5Str" << md5Str<<endl;
 }
